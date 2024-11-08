@@ -43,7 +43,7 @@ def cut_image_using_contours(image, contours):
     green_lemon_color = (50, 205, 50)
     black_color = (0, 0, 0)
     white_color = (255, 255, 255)
-    color_background = np.full_like(image, white_color)
+    color_background = np.full_like(image, green_lemon_color)
 
     cut_image_with_white_bg = np.where(mask_3channel == 0, color_background, cut_image)
 

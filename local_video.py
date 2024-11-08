@@ -104,7 +104,7 @@ if __name__ == "__main__":
     # `video_dir` a directory of JPEG frames with filenames like `<frame_index>.jpg`
 
     video_dir = "E:/aliceplace/"
-    target_name = "C0345"
+    target_name = "C0314"
     video_input_dir = f"{video_dir}/{target_name}"
     delete_folders(video_dir, f"{target_name}_track")
     # scan all the JPEG frame names in this directory    
@@ -115,45 +115,50 @@ if __name__ == "__main__":
     ]
     frame_names.sort(key=lambda p: int(os.path.splitext(p)[0]))    
     
-    point_x = 1400
-    point_y = 200
+    index_frame_a = 0
+    index_frame_b = 244 
+    point_x = 1300
+    point_y = 600
     check_point_a = [[point_x, point_y], [point_x, point_y + 500], [point_x, point_y + 1000]]   
     check_point_b = [[point_x, point_y], [point_x, point_y + 500], [point_x, point_y + 1000]]
     points = np.array(check_point_a, dtype=np.float32)        
-    print_key_frame(ann_frame_idx=0, video_input_dir=video_input_dir, points=points)    
+    print_key_frame(ann_frame_idx=index_frame_a, video_input_dir=video_input_dir, points=points)    
     points = np.array(check_point_b, dtype=np.float32)        
-    print_key_frame(ann_frame_idx=2, video_input_dir=video_input_dir, points=points)
+    print_key_frame(ann_frame_idx=index_frame_b, video_input_dir=video_input_dir, points=points)
     
-    
-    inference_state = predictor.init_state(video_path=video_input_dir)
-    set_key_frame(ann_frame_idx=0, ann_obj_id=0, points=check_point_a)
-    set_key_frame(ann_frame_idx=2, ann_obj_id=224, points=check_point_b)    
-    create_folders(video_dir, f"{target_name}_track")
+       
 
-    # run propagation throughout the video and collect the results in a dict
-    video_segments = {}  # video_segments contains the per-frame segmentation results
-    for out_frame_idx, out_obj_ids, out_mask_logits in predictor.propagate_in_video(inference_state):
-        video_segments[out_frame_idx] = {
-            out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy() for i, out_obj_id in enumerate(out_obj_ids)
-        }
+    key_event = input("press y to continue: ")    
+    if key_event == 'y':
+        inference_state = predictor.init_state(video_path=video_input_dir)
+        set_key_frame(ann_frame_idx=index_frame_a, ann_obj_id=index_frame_a, points=check_point_a)
+        set_key_frame(ann_frame_idx=index_frame_b, ann_obj_id=index_frame_b, points=check_point_b)    
+        create_folders(video_dir, f"{target_name}_track")
 
-    # render the segmentation results every few frames
-    vis_frame_stride = 1
-    plt.close("all")
+        # run propagation throughout the video and collect the results in a dict
+        video_segments = {}  # video_segments contains the per-frame segmentation results
+        for out_frame_idx, out_obj_ids, out_mask_logits in predictor.propagate_in_video(inference_state):
+            video_segments[out_frame_idx] = {
+                out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy() for i, out_obj_id in enumerate(out_obj_ids)
+            }
 
-    logging.info("video segments len %s", len(video_segments))    
-    logging.info("video segments keys %s", list(video_segments.keys())[:10])    
+        # render the segmentation results every few frames
+        vis_frame_stride = 1
+        plt.close("all")
 
-    for out_frame_idx in range(0, len(frame_names), vis_frame_stride):
-        #plt.figure(figsize=(6, 4))
-        #plt.title(f"frame {out_frame_idx}")
-        #plt.imshow(Image.open(os.path.join(video_dir, frame_names[out_frame_idx])))
+        logging.info("video segments len %s", len(video_segments))    
+        logging.info("video segments keys %s", list(video_segments.keys())[:10])    
 
-        temp_image = np.array(Image.open(os.path.join(video_input_dir, frame_names[out_frame_idx])).convert("RGB"))
-        for out_obj_id, out_mask in video_segments[out_frame_idx].items():
-            print(out_obj_id)
-            mask = np.squeeze(out_mask)            
-            cut_image = save_mask(temp_image, mask)
-            save_image(f"{video_dir}/{target_name}_track/{frame_names[out_frame_idx]}", cut_image)
-            #show_mask(out_mask, plt.gca(), obj_id=out_obj_id)
-            #plt.show()
+        for out_frame_idx in range(0, len(frame_names), vis_frame_stride):
+            #plt.figure(figsize=(6, 4))
+            #plt.title(f"frame {out_frame_idx}")
+            #plt.imshow(Image.open(os.path.join(video_dir, frame_names[out_frame_idx])))
+
+            temp_image = np.array(Image.open(os.path.join(video_input_dir, frame_names[out_frame_idx])).convert("RGB"))
+            for out_obj_id, out_mask in video_segments[out_frame_idx].items():
+                print(out_obj_id)
+                mask = np.squeeze(out_mask)            
+                cut_image = save_mask(temp_image, mask)
+                save_image(f"{video_dir}/{target_name}_track/{frame_names[out_frame_idx]}", cut_image)
+                #show_mask(out_mask, plt.gca(), obj_id=out_obj_id)
+                #plt.show()
