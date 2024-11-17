@@ -184,3 +184,7 @@ If you use SAM 2 or the SA-V dataset in your research, please use the following 
   year={2024}
 }
 ```
+
+
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+https://pytorch.org/get-started/locally/

@@ -22,15 +22,19 @@ elif torch.backends.mps.is_available():
     device = torch.device("mps")
 else:
     device = torch.device("cpu")
+
 print(f"using device: {device}")
+device = torch.device("cpu")
 
 if device.type == "cuda":
+    logging.warning("#" * 50)
     # use bfloat16 for the entire notebook
     torch.autocast("cuda", dtype=torch.bfloat16).__enter__()
     # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
     if torch.cuda.get_device_properties(0).major >= 8:
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
+        
 elif device.type == "mps":
     print(
         "\nSupport for MPS devices is preliminary. SAM 2 is trained with CUDA and might "
@@ -101,10 +105,14 @@ predictor = build_sam2_video_predictor(model_cfg, sam2_checkpoint, device=device
 
 if __name__ == "__main__":
     
+    if torch.cuda.is_available():  
+        logging.info("we are using cuda")
+        logging.info(f"cuda:{torch.cuda.current_device()}")
+        
     # `video_dir` a directory of JPEG frames with filenames like `<frame_index>.jpg`
 
-    video_dir = "E:/aliceplace/"
-    target_name = "C0314"
+    video_dir = "C:/aliceplace/"
+    target_name = "b01_hd"
     video_input_dir = f"{video_dir}/{target_name}"
     delete_folders(video_dir, f"{target_name}_track")
     # scan all the JPEG frame names in this directory    
@@ -115,24 +123,29 @@ if __name__ == "__main__":
     ]
     frame_names.sort(key=lambda p: int(os.path.splitext(p)[0]))    
     
-    index_frame_a = 0
-    index_frame_b = 244 
-    point_x = 1300
-    point_y = 600
-    check_point_a = [[point_x, point_y], [point_x, point_y + 500], [point_x, point_y + 1000]]   
-    check_point_b = [[point_x, point_y], [point_x, point_y + 500], [point_x, point_y + 1000]]
-    points = np.array(check_point_a, dtype=np.float32)        
-    print_key_frame(ann_frame_idx=index_frame_a, video_input_dir=video_input_dir, points=points)    
-    points = np.array(check_point_b, dtype=np.float32)        
-    print_key_frame(ann_frame_idx=index_frame_b, video_input_dir=video_input_dir, points=points)
-    
-       
+    key_frames = [ 
+        [0, [ [500,  500],  [500,  1000] ]],         
+        [150, [  [400,  400], [400,  600],  [580,  1000]]],
+        [500, [  [400,  500], [400, 700],  [523,  673], ]],        
+        #[800, [  [550,  750], [550,  1000],  [550,  1100] ]],        
+    ]
+    for k, v in key_frames:
+        index_frame_a = k                
+        points = np.array(v, dtype=np.float32)        
+        print_key_frame(ann_frame_idx=index_frame_a, 
+                        video_input_dir=video_input_dir, 
+                        points=points)           
 
     key_event = input("press y to continue: ")    
     if key_event == 'y':
         inference_state = predictor.init_state(video_path=video_input_dir)
-        set_key_frame(ann_frame_idx=index_frame_a, ann_obj_id=index_frame_a, points=check_point_a)
-        set_key_frame(ann_frame_idx=index_frame_b, ann_obj_id=index_frame_b, points=check_point_b)    
+        for k, v in key_frames:
+            index_frame_a = k                
+            points = np.array(v, dtype=np.float32)                
+            set_key_frame(ann_frame_idx=index_frame_a, 
+                          ann_obj_id=index_frame_a, 
+                          points=points)
+        
         create_folders(video_dir, f"{target_name}_track")
 
         # run propagation throughout the video and collect the results in a dict
@@ -149,11 +162,12 @@ if __name__ == "__main__":
         logging.info("video segments len %s", len(video_segments))    
         logging.info("video segments keys %s", list(video_segments.keys())[:10])    
 
+
         for out_frame_idx in range(0, len(frame_names), vis_frame_stride):
             #plt.figure(figsize=(6, 4))
             #plt.title(f"frame {out_frame_idx}")
             #plt.imshow(Image.open(os.path.join(video_dir, frame_names[out_frame_idx])))
-
+            
             temp_image = np.array(Image.open(os.path.join(video_input_dir, frame_names[out_frame_idx])).convert("RGB"))
             for out_obj_id, out_mask in video_segments[out_frame_idx].items():
                 print(out_obj_id)
