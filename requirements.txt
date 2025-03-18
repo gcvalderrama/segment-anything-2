@@ -1,1 +1,1 @@
-keyboard
+opencv-python
