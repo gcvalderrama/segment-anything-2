@@ -1,1 +1,4 @@
 opencv-python
+pyzmq
+matplotlib
+tk

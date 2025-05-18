@@ -10,12 +10,14 @@ import torch
 import cv2
 import logging
 import argparse
+import sys
 logging.basicConfig(
     level=logging.INFO,  # Set the logging level
-    # format to print the line number and module 
     format='%(asctime)s - %(module)s:%(lineno)d - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'  # Date format in log messages
+    datefmt='%Y-%m-%d %H:%M:%S',  # Date format in log messages
+    stream=sys.stdout  # Write log messages to standard output
 )
+
 sam2_checkpoint = "checkpoints/sam2.1_hiera_large.pt"
 model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
 
@@ -25,7 +27,7 @@ elif torch.backends.mps.is_available():
     device = torch.device("mps")
 else:
     device = torch.device("cpu")
-print(f"using device: {device}")
+
 
 if device.type == "cuda":
     # use bfloat16 for the entire notebook
@@ -208,9 +210,10 @@ def validate_inputs(args: argparse.Namespace) -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = validate_inputs(parse_args())        
+    logging.info(f"segment using device: {device}")
     logging.info(f"input_dir: {args.input_dir}")    
     logging.info(f"output_dir: {args.output_dir}")
     segment_directory(args.input_dir, args.output_dir)
-    
+    exit(0)
     
     
