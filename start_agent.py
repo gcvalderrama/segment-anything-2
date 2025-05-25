@@ -57,6 +57,28 @@ def read_information(directory_path, key_name):
         information = json.loads(f.read())
     return information
 
+def extract_main_human(image, information: dict, labels: list = ['person']):
+    image_width, image_height = image.size
+    image_area = image_width * image_height
+    boxes = []
+    for key, items in information.items():                
+        for item in items:                                                            
+            box = item['box']
+            score = item['score']
+            area = (box[2] - box[0]) * (box[3] - box[1])                
+            if key not in labels or score < 0.90 or area < image_area * 0.005:   
+                logging.debug(f"Skip {key} {score} area of the box:  {box} :  {area}")                             
+                continue
+            else:                
+                boxes.append((box, area))    
+    if not boxes:
+        return None
+    
+    sorted_boxes = sorted(boxes, key=lambda x: x[1], reverse=True)  # Sort by area, largest first
+    
+    return [sorted_boxes[0][0]]  # Return the box with the largest area    
+    
+
 def extract_humans(image, information: dict, labels: list = ['person']):        
     image_width, image_height = image.size
     image_area = image_width * image_height
@@ -187,7 +209,7 @@ if __name__ == "__main__":
                 try:                    
                     image = Image.open(os.path.join(directory, file_name))                                        
                     information = read_information(directory, file_name_no_ext)                
-                    boxes = extract_humans(image, information)
+                    boxes = extract_main_human(image, information)
                     if boxes:                    
                         mask = segment_picture(predictor, image, boxes) 
                         save_segmented_image(image, file_name_no_ext, mask, output_directory)                        
